@@ -20,3 +20,20 @@
 ## 使用方法
 
 `Usage: oli <var> [-i|-e|-c] [-s sep] ... [--] [file...]`
+
+### ベストプラクティス
+
+このようなファイルの場合...
+
+```
+PATH='/home/x/bin'
+PATH='/home/x/.local/java/bin'
+LOCAL_VAR='test'
+```
+
+`cat file | ./oli.sh PATH -eis :`
+
+```
+export PATH='/home/x/bin:/home/x/.local/java/bin:$PATH'
+LOCAL_VAR='test'
+```
