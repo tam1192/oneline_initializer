@@ -40,7 +40,6 @@ trim() {
 	sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
-
 # 引数 <var> <sep> ...
 merge_vars() {
 	# awk_macros
@@ -48,20 +47,20 @@ merge_vars() {
 	kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
 	next_key="current_key=key; printf(\"$export%s=\\\"$%s\",key,key);"
 	line_last='printf("\"\n");'
-    add_rule='' # 追加ルール
-    while [ $# -ge 2 ]; do
-        k=$1
-        s=$2
-        shift 2
+	add_rule='' # 追加ルール
+	while [ $# -ge 2 ]; do
+		k=$1
+		s=$2
+		shift 2
 
-        add_rule="
+		add_rule="
             $add_rule
             key == \"$k\" {
                 printf(\"$s%s\", val);
                 next;
             }
         "
-    done
+	done
 
 	awk -F '=' "
         $kv_sep
@@ -83,34 +82,34 @@ merge_vars() {
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-o)
-        if [ $# -ge 2 ]; then
-            origin="$origin $2"
-            shift 2
-        else
-            shift $#
-        fi
-        ;;
-    -e)
-        if [ $# -ge 1 ]; then
-            export="export "
-            shift 1
-        else
-            shift $#
-        fi
-        ;;
-    -s)
-        if [ $# -ge 3 ]; then
-            seps="$seps $2 $3"
-            shift 3
-        else
-            shift $#
-        fi
-        ;;
-    *)
+		if [ $# -ge 2 ]; then
+			origin="$origin $2"
+			shift 2
+		else
+			shift $#
+		fi
+		;;
+	-e)
+		if [ $# -ge 1 ]; then
+			export="export "
+			shift 1
+		else
+			shift $#
+		fi
+		;;
+	-s)
+		if [ $# -ge 3 ]; then
+			seps="$seps $2 $3"
+			shift 3
+		else
+			shift $#
+		fi
+		;;
+	*)
 		echo "Usage: oli [-o <var>|-e|-s <var> <sep>] ..."
 		exit 0
 		;;
-    esac
+	esac
 done
 
 # shellcheck disable=SC2086
