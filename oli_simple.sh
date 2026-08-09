@@ -49,7 +49,6 @@ merge_vars() {
 	next_key="current_key=key; printf(\"$export%s=\\\"$%s\",key,key);"
 	line_last='printf("\"\n");'
     add_rule='' # 追加ルール
-
     while [ $# -ge 2 ]; do
         k=$1
         s=$2
@@ -114,4 +113,5 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-find_assignments | trim | sort | uniq | merge_vars "$seps" | remove_include "$origin"
+# shellcheck disable=SC2086
+find_assignments | trim | sort | uniq | merge_vars $seps | remove_include "$origin"
