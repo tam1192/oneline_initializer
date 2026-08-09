@@ -62,7 +62,7 @@ merge_vars() {
 	line_last='printf("\"\n");'
     add_rule='' # 追加ルール
 
-    while [ $# -ne 0 ]; do
+    while [ $# -ge 2 ]; do
         k=$1
         s=$2
         shift 2
