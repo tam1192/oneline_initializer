@@ -1,31 +1,13 @@
 #!/bin/sh
 
 # 環境変数
+# 必要な時は "export" と入れる
 export=""
 # オリジナル(継承破棄)
 origin=""
 # セパレータリスト
 # <var> <sep> ...
 seps=""
-
-# exportを追加する
-add_export() {
-	# -e オプションの引数を構築
-	sed_cmd="sed"
-
-	# 引数がない場合は全てを対象とする
-	if [ $# -eq 0 ]; then
-		sed_cmd="$sed_cmd -e 's/^/export /'"
-	else
-		for var in "$@"; do
-			# 行頭のスペース（任意）＋「変数名=」の形にマッチさせ、"export 変数名=" に置換
-			sed_cmd="$sed_cmd -e 's/^$var=/export $var=/'"
-		done
-	fi
-
-	# 組み立てたコマンドを実行
-	eval "$sed_cmd"
-}
 
 # 該当変数の継承を排除する
 remove_include() {
@@ -64,7 +46,7 @@ merge_vars() {
 	# awk_macros
 	# key valueに分離するコード
 	kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
-	next_key='current_key=key; printf("%s=\"$%s",key,key);'
+	next_key="current_key=key; printf(\"$export%s=\\\"$%s\",key,key);"
 	line_last='printf("\"\n");'
     add_rule='' # 追加ルール
 
@@ -102,7 +84,7 @@ merge_vars() {
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-h | --help)
-		echo "Usage: oli [-o <var>|-e <var>|-s <var> <sep>] ..."
+		echo "Usage: oli [-o <var>|-e|-s <var> <sep>] ..."
 		exit 0
 		;;
 	-o)
@@ -114,9 +96,9 @@ while [ $# -gt 0 ]; do
         fi
         ;;
     -e)
-        if [ $# -ge 2 ]; then
-            export="$export $2"
-            shift 2
+        if [ $# -ge 1 ]; then
+            export="export "
+            shift 1
         else
             shift $#
         fi
@@ -132,4 +114,4 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-find_assignments | trim | sort | uniq | merge_vars "$seps" | remove_include "$origin" | add_export "$export"
+find_assignments | trim | sort | uniq | merge_vars "$seps" | remove_include "$origin"
