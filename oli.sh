@@ -116,21 +116,24 @@ awk_begin="${awk_begin}}
 # -------------------------------------------------------------------
 # MAIN & END ブロックの組み立て
 # -------------------------------------------------------------------
-awk_main_1='
+skip_comments='/^\s*#/'
+skip_blank='/^\s*$/'
+
+awk_main_1="
 # コメント・空行はスキップ
-/^\s*#/ || /^\s*$/ { next }
+${skip_comments} || ${skip_blank} { next }
 
 # 毎行のデフォルト区切り文字
-{ sep = " " }
-'
+{ sep = \" \" }
+"
 
-awk_main_2='
+awk_main_2="
 {
-    vn = $1;
-    vv = $0; sub(/^[^=]*=/, "", vv);
-    values[vn] = (values[vn] == "") ? vv : values[vn] sep vv;
+    vn = \$1;
+    vv = \$0; sub(/^[^=]*=/, \"\", vv);
+    values[vn] = (values[vn] == \"\") ? vv : values[vn] sep vv;
 }
-'
+"
 
 awk_end='
 END {
