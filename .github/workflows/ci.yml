@@ -1,0 +1,25 @@
+name: CI
+
+on:
+    pull_request:
+
+jobs:
+    lint:
+        name: shellcheck
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: tecolicom/actions-use-apt-tools@v1
+              with:
+                  tools: shellcheck
+            - run: make check
+
+    format:
+        name: shfmt
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: tecolicom/actions-use-apt-tools@v1
+              with:
+                  tools: shfmt
+            - run: make fmt_check
