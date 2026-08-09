@@ -1,6 +1,12 @@
 #!/bin/sh
 
-exports="PATH"
+# 環境変数
+export=""
+# オリジナル(継承破棄)
+origin=""
+# セパレータリスト
+# <var> <sep> ...
+seps=""
 
 # exportを追加する
 add_export() {
@@ -92,4 +98,38 @@ merge_vars() {
     "
 }
 
-find_assignments | trim | sort | uniq | merge_vars "PATH" ":" | remove_include "b" | add_export $exports
+# 引数解析
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-h | --help)
+		echo "Usage: oli [-o <var>|-e <var>|-s <var> <sep>] ..."
+		exit 0
+		;;
+	-o)
+        if [ $# -ge 2 ]; then
+            origin="$origin $2"
+            shift 2
+        else
+            shift $#
+        fi
+        ;;
+    -e)
+        if [ $# -ge 2 ]; then
+            export="$export $2"
+            shift 2
+        else
+            shift $#
+        fi
+        ;;
+    -s)
+        if [ $# -ge 3 ]; then
+            seps="$seps $2 $3"
+            shift 3
+        else
+            shift $#
+        fi
+        ;;
+    esac
+done
+
+find_assignments | trim | sort | uniq | merge_vars "$seps" | remove_include "$origin" | add_export "$export"
