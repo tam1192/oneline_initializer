@@ -82,10 +82,6 @@ merge_vars() {
 # 引数解析
 while [ $# -gt 0 ]; do
 	case "$1" in
-	-h | --help)
-		echo "Usage: oli [-o <var>|-e|-s <var> <sep>] ..."
-		exit 0
-		;;
 	-o)
         if [ $# -ge 2 ]; then
             origin="$origin $2"
@@ -110,8 +106,12 @@ while [ $# -gt 0 ]; do
             shift $#
         fi
         ;;
+    *)
+		echo "Usage: oli [-o <var>|-e|-s <var> <sep>] ..."
+		exit 0
+		;;
     esac
 done
 
 # shellcheck disable=SC2086
-find_assignments | trim | sort | uniq | merge_vars $seps | remove_include "$origin"
+find_assignments | trim | sort | uniq | merge_vars $seps | remove_include $origin
