@@ -9,7 +9,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - run: apt-get update && apt-get install -y shellcheck
+            - uses: tecolicom/actions-use-apt-tools@v1
+              with:
+                  tools: shellcheck
             - run: make check
 
     format:
@@ -17,5 +19,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - run: apt-get update && apt-get install -y shfmt
+            - uses: tecolicom/actions-use-apt-tools@v1
+              with:
+                  tools: shfmt
             - run: make fmt_check
