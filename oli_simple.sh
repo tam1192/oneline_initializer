@@ -22,7 +22,7 @@ remove_include() {
 
 	for var in "$@"; do
 		# 行頭のスペース（任意）＋「変数名=」の形にマッチさせ、"export 変数名=" に置換
-		sed_cmd="$sed_cmd -e 's/^$var=\"\$$var./$var=\"/'"
+		sed_cmd="$sed_cmd -e 's/^$export$var=\"\$$var./$export$var=\"/'"
 	done
 
 	# 組み立てたコマンドを実行
