@@ -2,9 +2,7 @@
 
 exports="PATH"
 
-# stdin: text
-# $1..: vars
-# stdout: text
+# exportを追加する
 add_export() {
 	# -e オプションの引数を構築
 	sed_cmd="sed"
@@ -23,6 +21,26 @@ add_export() {
 	eval "$sed_cmd"
 }
 
+# 該当変数の継承を排除する
+remove_include() {
+	# -e オプションの引数を構築
+	sed_cmd="sed"
+
+	# 引数がない場合は終了
+	if [ $# -eq 0 ]; then
+		cat
+		return 0
+	fi
+
+	for var in "$@"; do
+		# 行頭のスペース（任意）＋「変数名=」の形にマッチさせ、"export 変数名=" に置換
+		sed_cmd="$sed_cmd -e 's/^$var=\"\$$var./$var=\"/'"
+	done
+
+	# 組み立てたコマンドを実行
+	eval "$sed_cmd"
+}
+
 # 変数代入の行 (KEY=VALUE) を抽出する
 find_assignments() {
 	# シェル文法に準拠: イコールの左側に空白を許可しない (例: KEY=VALUE, KEY="V V" はOK / K = V はNG)
@@ -35,11 +53,11 @@ trim() {
 }
 
 merge_vars() {
-    # awk_macros
-    # key valueに分離するコード
-    kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
-    next_key='current_key=key; printf("export %s=\"$%s",key,key);'
-    line_last='printf("\"\n");'
+	# awk_macros
+	# key valueに分離するコード
+	kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
+	next_key='current_key=key; printf("%s=\"$%s",key,key);'
+	line_last='printf("\"\n");'
 
 	awk -F '=' "
         ${kv_sep}
@@ -60,4 +78,4 @@ merge_vars() {
     "
 }
 
-find_assignments | trim | sort | uniq | merge_vars | add_export $exports
+find_assignments | trim | sort | uniq | merge_vars | remove_include "b" | add_export $exports
