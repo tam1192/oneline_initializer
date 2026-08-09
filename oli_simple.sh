@@ -52,24 +52,38 @@ trim() {
 	sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
+
+# 引数 <var> <sep> ...
 merge_vars() {
 	# awk_macros
 	# key valueに分離するコード
 	kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
 	next_key='current_key=key; printf("%s=\"$%s",key,key);'
 	line_last='printf("\"\n");'
+    add_rule='' # 追加ルール
+
+    while [ $# -ne 0 ]; do
+        k=$1
+        s=$2
+        shift 2
+
+        add_rule="
+            $add_rule
+            key == \"$k\" {
+                printf(\"$s%s\", val);
+                next;
+            }
+        "
+    done
 
 	awk -F '=' "
-        ${kv_sep}
+        $kv_sep
         NR == 1 { $next_key }
         current_key != key {
             $line_last
             $next_key
         }
-        key == \"PATH\" {
-            printf(\":%s\", val);
-            next;
-        }
+        $add_rule
         {
             printf(\" %s\", val);
             next;
@@ -78,4 +92,4 @@ merge_vars() {
     "
 }
 
-find_assignments | trim | sort | uniq | merge_vars | remove_include "b" | add_export $exports
+find_assignments | trim | sort | uniq | merge_vars "PATH" ":" | remove_include "b" | add_export $exports
