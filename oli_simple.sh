@@ -23,6 +23,17 @@ add_export() {
 	eval "$sed_cmd"
 }
 
+# 変数代入の行 (KEY=VALUE) を抽出する
+find_assignments() {
+	# シェル文法に準拠: イコールの左側に空白を許可しない (例: KEY=VALUE, KEY="V V" はOK / K = V はNG)
+	grep -E '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*='
+}
+
+# 行頭および行末のインデント（空白・タブ）をトリムする
+trim() {
+	sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
 merge_vars() {
     # awk_macros
     # key valueに分離するコード
@@ -49,10 +60,4 @@ merge_vars() {
     "
 }
 
-# execute
-# $1: exports
-execute() {
-	sort | uniq | merge_vars | add_export "$1"
-}
-
-execute $exports
+find_assignments | trim | sort | uniq | merge_vars | add_export $exports
