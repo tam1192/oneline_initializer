@@ -14,12 +14,15 @@
 
 - cat  
   ファイルの読み込みに使用
-- sed  
+- sed, awk, sort, uniq
   構文解析に使用
 
 ## 使用方法
 
-`Usage: oli <var> [-i|-e|-c] [-s sep] ... [--] [file...]`
+`Usage: (cat file |) oli [-o <var>|-e|-s <var> <sep>] (> newfile)`
+-o : オリジナルとして、変数の継承をしません
+-e : 環境変数として扱います
+-s : セパレータを設定します
 
 ### ベストプラクティス
 
@@ -31,7 +34,7 @@ PATH='/home/x/.local/java/bin'
 LOCAL_VAR='test'
 ```
 
-`cat file | ./oli.sh PATH -eis :`
+`cat file | ./oli.sh -e -s PATH :`
 
 ```
 export PATH='/home/x/bin:/home/x/.local/java/bin:$PATH'

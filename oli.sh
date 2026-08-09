@@ -1,156 +1,116 @@
 #!/bin/sh
 
-awk_begin='BEGIN {
-    FS = "=";
-'
-awk_sep_rules=""
+# 環境変数
+# 必要な時は "export" と入れる
+export=""
+# オリジナル(継承破棄)
+origin=""
+# セパレータリスト
+# <var> <sep> ...
+seps=""
 
-# -------------------------------------------------------------------
-# 引数解析: oli <var> [-i|-e|-c] [-s sep] ... [--] [file...]
-# -------------------------------------------------------------------
+# 該当変数の継承を排除する
+remove_include() {
+	# -e オプションの引数を構築
+	sed_cmd="sed"
+
+	# 引数がない場合は終了
+	if [ $# -eq 0 ]; then
+		cat
+		return 0
+	fi
+
+	for var in "$@"; do
+		# 行頭のスペース（任意）＋「変数名=」の形にマッチさせ、"export 変数名=" に置換
+		sed_cmd="$sed_cmd -e 's/^$export$var=\"\$$var./$export$var=\"/'"
+	done
+
+	# 組み立てたコマンドを実行
+	eval "$sed_cmd"
+}
+
+# 変数代入の行 (KEY=VALUE) を抽出する
+find_assignments() {
+	# シェル文法に準拠: イコールの左側に空白を許可しない (例: KEY=VALUE, KEY="V V" はOK / K = V はNG)
+	grep -E '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*='
+}
+
+# 行頭および行末のインデント（空白・タブ）をトリムする
+trim() {
+	sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+# 引数 <var> <sep> ...
+merge_vars() {
+	# awk_macros
+	# key valueに分離するコード
+	kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
+	next_key="current_key=key; printf(\"$export%s=\\\"$%s\",key,key);"
+	line_last='printf("\"\n");'
+	add_rule='' # 追加ルール
+	while [ $# -ge 2 ]; do
+		k=$1
+		s=$2
+		shift 2
+
+		add_rule="
+            $add_rule
+            key == \"$k\" {
+                printf(\"$s%s\", val);
+                next;
+            }
+        "
+	done
+
+	awk -F '=' "
+        $kv_sep
+        NR == 1 { $next_key }
+        current_key != key {
+            $line_last
+            $next_key
+        }
+        $add_rule
+        {
+            printf(\" %s\", val);
+            next;
+        }
+        END { $line_last }
+    "
+}
+
+# 引数解析
 while [ $# -gt 0 ]; do
 	case "$1" in
-	-h | --help)
-		echo "Usage: oli <var> [-i|-e|-c] [-s sep] ... [--] [file...]"
-		exit 0
+	-o)
+		if [ $# -ge 2 ]; then
+			origin="$origin $2"
+			shift 2
+		else
+			shift $#
+		fi
 		;;
-	--)
-		shift
-		break
+	-e)
+		if [ $# -ge 1 ]; then
+			export="export "
+			shift 1
+		else
+			shift $#
+		fi
 		;;
-	-*)
-		# 引数の先頭がいきなりハイフンの場合は解析終了（ファイル名指定へ）
-		break
+	-s)
+		if [ $# -ge 3 ]; then
+			seps="$seps $2 $3"
+			shift 3
+		else
+			shift $#
+		fi
 		;;
 	*)
-		# 1. まず変数名を取得
-		var="$1"
-		shift
-
-		# デフォルト値のリセット
-		is_export=0
-		is_inherit=0
-		is_combine=0
-		sep_val=" "
-		[ "$var" = "PATH" ] && sep_val=":" # PATHのデフォルト
-
-		# 2. この変数に続くハイフン付きオプションをすべて消費するループ
-		while [ $# -gt 0 ]; do
-			case "$1" in
-			--)
-				shift
-				break 2 # -- が来たら完全終了
-				;;
-			-*)
-				opts="${1#-}"
-				shift
-
-				# 1文字ずつ取り出して処理 (例: -cs -> 'c', 's')
-				while [ -n "$opts" ]; do
-					opt="${opts%"${opts#?}"}"
-					opts="${opts#?}"
-
-					case "$opt" in
-					i) is_inherit=1 ;;
-					e) is_export=1 ;;
-					c) is_combine=1 ;;
-					s)
-						if [ -n "$opts" ]; then
-							sep_val="$opts"
-							opts=""
-						else
-							sep_val="$1"
-							shift
-						fi
-						;;
-					*)
-						echo "エラー: 不明なオプション -$opt" >&2
-						exit 1
-						;;
-					esac
-				done
-				;;
-			*)
-				# 次の変数名または引数が来たのでオプション消費ループを抜ける
-				break
-				;;
-			esac
-		done
-
-		# 3. 組み合わせ結果から prefix / suffix を確定
-		prefix_val="${var}='"
-		suffix_val="'"
-
-		# PATH はデフォルトで export 付与
-		[ "$var" = "PATH" ] && is_export=1
-
-		# -i (継承) と -c (合成) の判定
-		if [ $is_inherit -eq 1 ]; then
-			prefix_val="${var}='\$${var}${sep_val}"
-		elif [ $is_combine -eq 1 ]; then
-			suffix_val="${sep_val}\$${var}'"
-		fi
-
-		# export の付与
-		if [ $is_export -eq 1 ]; then
-			prefix_val="export ${prefix_val}"
-		fi
-
-		# 4. その場で AWK 用コードに直書き追加
-		awk_begin="${awk_begin}    prefix[\"${var}\"] = \"${prefix_val}\";
-    suffix[\"${var}\"] = \"${suffix_val}\";
-"
-
-		# 区切り文字がスペース以外の場合のみオーバーライド規則を追加（改行を直接入れる）
-		if [ "$sep_val" != " " ]; then
-			awk_sep_rules="${awk_sep_rules}\$1 == \"${var}\" { sep = \"${sep_val}\" }
-"
-		fi
+		echo "Usage: oli [-o <var>|-e|-s <var> <sep>] ..."
+		exit 0
 		;;
 	esac
 done
 
-awk_begin="${awk_begin}}
-"
-
-# -------------------------------------------------------------------
-# MAIN & END ブロックの組み立て
-# -------------------------------------------------------------------
-skip_comments='/^\s*#/'
-skip_blank='/^\s*$/'
-
-awk_main_1="
-# コメント・空行はスキップ
-${skip_comments} || ${skip_blank} { next }
-
-# 毎行のデフォルト区切り文字
-{ sep = \" \" }
-"
-
-awk_main_2="
-{
-    vn = \$1;
-    vv = \$0; sub(/^[^=]*=/, \"\", vv);
-    values[vn] = (values[vn] == \"\") ? vv : values[vn] sep vv;
-}
-"
-
-awk_end='
-END {
-    for (k in values) {
-        if (values[k] != "") {
-            p = (k in prefix) ? prefix[k] : k "=\x27";
-            s = (k in suffix) ? suffix[k] : "\x27";
-
-            print p values[k] s;
-        }
-    }
-}
-'
-
-# -------------------------------------------------------------------
-# 5. ガッチャンコして実行
-# -------------------------------------------------------------------
-awk_script="${awk_begin}${awk_main_1}${awk_sep_rules}${awk_main_2}${awk_end}"
-
-awk "$awk_script" "$@"
+# shellcheck disable=SC2086
+find_assignments | trim | sort | uniq | merge_vars $seps | remove_include $origin
