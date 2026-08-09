@@ -1,5 +1,7 @@
 #!/bin/sh
 
+exports="PATH"
+
 # stdin: text
 # $1..: vars
 # stdout: text
@@ -21,4 +23,10 @@ add_export() {
 	eval "$sed_cmd"
 }
 
-add_export "$@"
+# execute
+# $1: exports
+execute() {
+	sort | uniq | add_export "$1"
+}
+
+execute $exports
