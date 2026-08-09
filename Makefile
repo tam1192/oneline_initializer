@@ -1,4 +1,4 @@
-TARGET := oli.sh oli_simple.sh
+TARGET := oli.sh
 CHECKER := shellcheck
 CHECKER_ARGS := -s sh 
 FMT := shfmt
