@@ -23,10 +23,36 @@ add_export() {
 	eval "$sed_cmd"
 }
 
+merge_vars() {
+    # awk_macros
+    # key valueに分離するコード
+    kv_sep="{key = \$1;\$1 = \"\";val = \$0;sub(/^ /, \"\", val);}"
+    next_key='current_key=key; printf("export %s=\"$%s",key,key);'
+    line_last='printf("\"\n");'
+
+	awk -F '=' "
+        ${kv_sep}
+        NR == 1 { $next_key }
+        current_key != key {
+            $line_last
+            $next_key
+        }
+        key == \"PATH\" {
+            printf(\":%s\", val);
+            next;
+        }
+        {
+            printf(\" %s\", val);
+            next;
+        }
+        END { $line_last }
+    "
+}
+
 # execute
 # $1: exports
 execute() {
-	sort | uniq | add_export "$1"
+	sort | uniq | merge_vars | add_export "$1"
 }
 
 execute $exports
