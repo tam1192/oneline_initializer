@@ -74,7 +74,11 @@ merge_vars() {
             printf(\" %s\", val);
             next;
         }
-        END { $line_last }
+        END {
+			if (NR != 0) {
+				$line_last
+			} 
+		}
     "
 }
 
